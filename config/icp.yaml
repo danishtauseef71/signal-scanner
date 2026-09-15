@@ -26,7 +26,7 @@ exclusions:
     weight: -3
     why: "Call volume too low for the product to pay back"
 
-qualified_at: 6
+qualified_at: 4
 
 filters:
   require_website: true

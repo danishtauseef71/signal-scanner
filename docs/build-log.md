@@ -339,3 +339,34 @@ Top of the ranking:
   positive weight. It depends entirely on reaching a careers page, and ten sites
   were unreachable. This signal is the most sensitive to fetch coverage.
 - `run.py` is still not built. Steps run individually in pipeline order.
+
+---
+
+## Close out — `qualified_at: 4`, `run.py`, README
+
+**Threshold dropped to 4.** Qualified accounts went from 3 to 4; Glendale Gentle
+Dentistry joins on `hiring_reception` alone. Everything else in the funnel is
+unchanged, since `qualified_at` only gates briefing, not export.
+
+**`run.py`** chains all eight steps with `--city`, `--limit`, `--from-step` and
+`--refresh`. Each step declares which flags it accepts, so an unsupported flag
+is never passed down rather than being rejected by the child's argparse. A
+failing step stops the run: later steps read the file an earlier one writes, so
+continuing would score a stale or partial list.
+
+Warm full run: **70 seconds**, of which 69 is `enrich_web` retrying the ten
+genuinely unreachable sites. Failures are deliberately not cached, per the
+caching rule — only successes are. That is the right trade, but it means the
+unreachable set is paid for on every run.
+
+**README** covers the ICP and why each signal was chosen, two-command setup, the
+funnel with real numbers, the six known limitations, and a ranked list of what
+to add next. Sample export committed at `samples/phoenix-dental.csv`.
+
+### Still open at close out
+
+- `market` in `icp.yaml` reads "Phoenix metro, AZ" while `cities.yaml` queries
+  the city-proper bbox, and `known_independent_names` is still empty, so the
+  five known false positives are still flagged as DSO owned.
+- Website resolution remains the highest-value next step by a wide margin: 158
+  of 208 practices are dropped for an OSM gap rather than a business fact.
