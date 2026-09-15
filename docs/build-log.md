@@ -370,3 +370,23 @@ to add next. Sample export committed at `samples/phoenix-dental.csv`.
   five known false positives are still flagged as DSO owned.
 - Website resolution remains the highest-value next step by a wide margin: 158
   of 208 practices are dropped for an OSM gap rather than a business fact.
+
+---
+
+## Live funnel in `run.py`
+
+Redrawn after every step from the data files on disk, nothing hardcoded. Stages
+that have no data yet print `-` and fill in as the run proceeds.
+
+**The funnel is built by intersection, not by independent counts.** Each stage
+is cut from the one above it, which surfaced a real discrepancy: `qualified` is
+not a subset of `deliverable`. `score.py` ranks the whole audience, so Bischoff
+Family Dentistry scores 6 and qualifies while having no MX record, and
+`export.py` holds it back. Counted independently the funnel would end on 4
+qualified; intersected it ends on **3 qualified and reachable**, which is what
+the campaign actually gets. Counting stages independently would have hidden
+that, which is the argument for intersecting even where subsets look obvious.
+
+Reachability and NPI match coverage are shown below the funnel, not in it.
+Nothing is dropped for being unreachable or unmatched — the practice stays in
+the list carrying null signals — so they are coverage, not cuts.

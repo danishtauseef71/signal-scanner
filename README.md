@@ -79,16 +79,33 @@ otherwise. See [`.env.example`](.env.example).
 
 ## Results on Phoenix
 
+`run.py` prints this after every step, built from the data files rather than
+from anything hardcoded. Each line is a strict subset of the one above it.
+
 ```
-discovered (Overpass)             208
-chains checked for DSO            187   (12 flagged as DSO owned)
-audience: website + not DSO        42
-  sites reachable                  32
-  NPI organisation matched         11
-  deliverable (has MX)             34
-qualified (score >= 4)              4
-exported rows                      34   (11 with an email address)
+FUNNEL
+  discovered             208  ########################################
+  has website             50     -158  ##########
+  not DSO owned           42       -8  ########
+  deliverable domain      34       -8  #######
+  qualified                3      -31  #
+
+COVERAGE  (not cuts, nothing is dropped for these)
+  site reachable          32 / 42     76%
+  NPI org matched         11 / 42     26%
+  provider count known    20 / 42     48%
 ```
+
+**Four practices clear the score threshold, but only three are reachable.**
+`score.py` ranks the whole audience, so a practice can qualify on signals while
+having no MX record — Bischoff Family Dentistry scores 6 and is held back by
+`export.py`. The funnel intersects each cut with the one above it, so the last
+line means "qualified *and* reachable", which is what the campaign actually
+gets. Reachability and NPI coverage sit below the funnel because they are not
+cuts: nothing is dropped for being unreachable, it just carries null signals.
+
+The export holds 34 rows — every deliverable account, ranked, not only the
+qualified ones.
 
 | Rank | Score | Practice | Signals fired |
 |---|---|---|---|
