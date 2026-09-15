@@ -112,8 +112,72 @@ market instead of relying on a list of names we happen to know.
 
 ### Open
 
-- `config/icp.yaml` has no `dso_detection` block yet, so the step cannot run on
-  real data until the floors are set.
 - Credentials written with periods normalise imperfectly: `Dr. Gregory A. Libby,
   D.D.S.` becomes `DR GREGORY A LIBBY D D S`. Harmless, since it returns 0
   matches either way, but untidy.
+
+---
+
+## First full `dso_check` run
+
+Floors set to 25 locations / 3 states, `require_both: true`. **187 chains
+checked, 12 flagged `dso_owned`, 0 failed lookups**, ~3 minutes cold, free after.
+
+### What worked
+
+Seven of the twelve are real DSO brands, found with no hardcoded list — which
+was the point of the exercise:
+
+| Chain | Locations | States | In market |
+|---|---|---|---|
+| Gentle Dental | ≥200 (capped) | 32 | 1 |
+| Western Dental | ≥200 (capped) | 9 | 4 |
+| Aspen Dental | 158 | 33 | 6 |
+| Bright Now Dental | 133 | 11 | 4 |
+| Perfect Teeth | 75 | 3 | 1 |
+| Dental Depot | 57 | 9 | 4 |
+| Risas Dental | 25 | 4 | 2 |
+
+`require_both` also did real work: `ARIZONA DENTAL` has 93 locations but all in
+one state, and was correctly not flagged.
+
+### What did not
+++
+**Five false positives, all generic names appearing once locally:**
+`DENTAL CENTER` (100/30), `ALL SMILES DENTAL` (54/24), `GATEWAY DENTAL` (48/21),
+`SOUTHERN SMILES` (40/12), `DIAMOND DENTAL` (37/20). These are unrelated
+practices sharing a common name across 20-30 states, not chains. This is the
+prefix-inflation the code comment warns about, showing up exactly as predicted.
+
+**A discriminator was tried and rejected.** Hypothesis: real DSOs should show
+many legal entities sharing one identical DBA, unrelated practices should not.
+The ratios do not separate — Aspen 75%, but Bright Now 16%, Dental Depot 7%,
+Risas 0%, against suspects running 6-26%. Complete overlap. **Do not revisit
+this idea without new evidence.** Local market count correlates (real DSOs often
+have 4-6 local sites, the suspects have 1) but breaks on Gentle Dental and
+Perfect Teeth, both genuine DSOs with a single Phoenix location.
+
+Resolution: twelve names is small enough to eyeball, and `known_independent_names`
+is precisely the backstop for this. Curation beats another threshold here.
+
+**Name variants can straddle a floor.** `RISAS DENTAL` (25/4) flags DSO while
+`RISAS DENTAL AND BRACES` (23/4) does not. Same company, opposite verdicts,
+either side of the floor of 25. Nothing currently reconciles variants of one
+chain into a single footprint.
+
+### Funnel impact
+
+`filters.require_website
+: true` is a far harder cut than the -3 weight it
+replaced:
+
+```
+discovered                     208
+after require_website           50   (-158)
+after dso_owned exclusion       42    (-8)
+```
+
+**42 of 208 practices, 20%, reach scoring.** The reasoning holds — no domain
+means nothing to send to — but most of the 158 dropped are practices where *OSM*
+lacks a website, not ones without a website in reality. A website-resolution
+step would widen this far more than going metro-wide would.

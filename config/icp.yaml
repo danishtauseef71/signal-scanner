@@ -1,5 +1,5 @@
 client: "AI phone receptionist for dental practices"
-market: "Phoenix, AZ"
+market: "Phoenix metro, AZ"
 
 signals:
   three_plus_providers:
@@ -19,9 +19,6 @@ signals:
     why: "Front desk load is spread thin across sites"
 
 exclusions:
-  no_website:
-    weight: -3
-    why: "Too small to buy, hard to reach"
   dso_owned:
     weight: -4
     why: "Call handling already centralised, problem solved"
@@ -31,5 +28,16 @@ exclusions:
 
 qualified_at: 6
 
+filters:
+  require_website: true
+  why: "The channel is email, so no domain means nothing to send to. Not a weak account, an unreachable one."
+
 matching:
   npi_confidence_floor: 85
+
+dso_detection:
+  npi_location_floor: 25
+  npi_state_floor: 3
+  require_both: true
+  known_dso_names: []
+  known_independent_names: []
