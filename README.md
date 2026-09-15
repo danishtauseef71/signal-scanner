@@ -160,3 +160,5 @@ against it.
 
 Stack: Python 3.11+, `requests`, `beautifulsoup4`, `pyyaml`, `dnspython`,
 `rapidfuzz`. No web framework, no ORM, no async.
+
+Licensed under the MIT Licence. See [LICENSE](LICENSE).
