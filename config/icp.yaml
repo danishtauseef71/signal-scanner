@@ -1,0 +1,35 @@
+client: "AI phone receptionist for dental practices"
+market: "Phoenix, AZ"
+
+signals:
+  three_plus_providers:
+    weight: 3
+    why: "More chairs means more inbound calls, so misses cost more"
+  no_online_booking:
+    weight: 3
+    why: "Booking runs through the phone, which is what we replace"
+  hiring_reception:
+    weight: 4
+    why: "Already paying to solve this problem with headcount"
+  accepting_new_patients:
+    weight: 2
+    why: "Capturing demand, so a missed call is lost revenue"
+  multiple_locations:
+    weight: 2
+    why: "Front desk load is spread thin across sites"
+
+exclusions:
+  no_website:
+    weight: -3
+    why: "Too small to buy, hard to reach"
+  dso_owned:
+    weight: -4
+    why: "Call handling already centralised, problem solved"
+  solo_provider:
+    weight: -3
+    why: "Call volume too low for the product to pay back"
+
+qualified_at: 6
+
+matching:
+  npi_confidence_floor: 85

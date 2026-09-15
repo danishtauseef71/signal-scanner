@@ -1,0 +1,15 @@
+# Discovery geography. Bounding boxes are [south, west, north, east].
+# Widen the market or add a city here, not in code.
+
+default_city: phoenix
+
+cities:
+  phoenix:
+    label: "Phoenix, AZ"
+    bbox: [33.29, -112.32, 33.75, -111.92]
+    note: "City proper. Excludes Scottsdale, Tempe, Mesa and Glendale."
+
+  phoenix_metro:
+    label: "Phoenix metro, AZ"
+    bbox: [33.15, -112.60, 33.85, -111.55]
+    note: "Valley wide. Slower query, several times the results."
