@@ -52,6 +52,16 @@ ROLE_LOCAL_PARTS = {
     "noreply", "no-reply", "donotreply", "marketing", "hr", "careers", "jobs",
 }
 
+# Two-label public suffixes, where the registrable domain needs three labels.
+MULTI_PART_SUFFIXES = {
+    "co.uk", "org.uk", "ac.uk", "gov.uk", "me.uk", "net.uk", "sch.uk",
+    "com.au", "net.au", "org.au", "edu.au", "gov.au",
+    "co.nz", "net.nz", "org.nz", "co.za", "org.za",
+    "com.br", "com.mx", "com.ar", "com.sg", "com.hk", "com.tr", "com.tw",
+    "co.jp", "ne.jp", "or.jp", "co.in", "net.in", "org.in", "co.kr",
+    "co.il", "com.cn", "com.ph", "com.my", "com.pk", "com.ua",
+}
+
 # MX hostname fragments that identify who actually runs the mailbox.
 MX_PROVIDERS = (
     ("Google Workspace", ("google.com", "googlemail.com", "aspmx.l.google")),
@@ -72,8 +82,8 @@ log = logging.getLogger("verify")
 # --- domains --------------------------------------------------------------
 
 
-def domain_from_website(website: str | None) -> str | None:
-    """Bare registrable host, lowercased, www stripped."""
+def host_from_website(website: str | None) -> str | None:
+    """Bare hostname, lowercased, port and www stripped."""
     if not website:
         return None
     candidate = website.strip()
@@ -82,7 +92,29 @@ def domain_from_website(website: str | None) -> str | None:
     host = (urlparse(candidate).netloc or "").lower().split(":")[0]
     if host.startswith("www."):
         host = host[4:]
-    return host or None
+    return host.strip(".") or None
+
+
+def registrable_domain(host: str | None) -> str | None:
+    """Reduce a hostname to the apex that actually holds the MX records.
+
+    Mail is addressed at the registrable domain, so a site published on a
+    subdomain ("book.example.com") must be reduced before the lookup or the
+    MX query asks a name that was never meant to answer it.
+
+    This is a suffix table rather than the full Public Suffix List, which
+    would mean a new dependency. It covers the common multi-part suffixes;
+    anything else reduces to the last two labels.
+    """
+    if not host:
+        return None
+    labels = host.split(".")
+    if len(labels) <= 2:
+        return host
+
+    last_two = ".".join(labels[-2:])
+    keep = 3 if last_two in MULTI_PART_SUFFIXES else 2
+    return ".".join(labels[-keep:])
 
 
 def identify_mx_provider(mx_hosts: list[str]) -> str | None:
@@ -167,7 +199,8 @@ def sift_addresses(emails: list[str], domain: str | None) -> dict:
 
 
 def verify_practice(practice: dict, cache: dict, resolver: dns.resolver.Resolver, refresh: bool) -> dict:
-    domain = domain_from_website(practice.get("site_url") or practice.get("website"))
+    host = host_from_website(practice.get("site_url") or practice.get("website"))
+    domain = registrable_domain(host)
 
     if not domain:
         return {
@@ -186,7 +219,9 @@ def verify_practice(practice: dict, cache: dict, resolver: dns.resolver.Resolver
     addresses = sift_addresses(practice.get("emails_found") or [], domain)
     return {
         **practice,
+        "site_host": host,
         "domain": domain,
+        "domain_reduced_from_subdomain": bool(host and host != domain),
         **mx,
         "free_mail_domain": domain in FREE_MAIL_DOMAINS,
         "catch_all": None,

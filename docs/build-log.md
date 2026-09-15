@@ -263,3 +263,79 @@ Cache files for the bogus zips were deleted.
   yields the wrong lookup. One case here, worth fixing before scale.
 - Five practices have no postcode and two have no address at all, so their NPI
   fields stay blank by design.
+
+---
+
+## Steps 6, 7 and 8 — `score`, `brief`, `export`, and first full run
+
+### Domain extraction fixed
+
+`verify` now reduces a hostname to its registrable apex before the MX lookup.
+`book.kidtasticdental.com` was being queried directly; mail is addressed at the
+apex, so the lookup asked a name never meant to answer it. Split into
+`host_from_website` and `registrable_domain`, with a small two-label public
+suffix table rather than a Public Suffix List dependency. Both `site_host` and
+`domain` are kept so the reduction stays auditable. This recovered one account:
+deliverable went from 33 to 34.
+
+### Decisions
+
+- **Unknown is not false.** `score.py` credits a signal only when it is exactly
+  `True`. Enrichment writes null when it could not establish a fact, which for
+  ten practices means the site was unreachable. Scoring null as an absence would
+  punish practices for our coverage gaps rather than their behaviour. Each row
+  carries `signal_coverage` so a rank built on fewer facts is visible, and ties
+  break on coverage before alphabetically.
+- **`brief.py` uses templates by default and needs no key.** The Anthropic SDK
+  is imported lazily inside the Claude path, so the pipeline runs on the
+  declared stack without it. `.env.example` is committed; enabling Claude briefs
+  needs `pip install anthropic` as well as a key. Templates only ever state
+  signals that actually fired, so an unreachable site cannot produce an invented
+  claim about a practice.
+- **`export.py` holds back undeliverable rows by default.** A row the sequencer
+  cannot send to is worse than no row, because the bounce costs domain
+  reputation. `--include-undeliverable` overrides it.
+
+### Bug: a step that dropped its own audience
+
+`brief.py` first wrote only the practices it briefed, so `export.py`, which
+reads the previous step's file, saw 3 practices instead of 42 and exported 2
+rows. Every step must carry the full set forward and mark rows rather than drop
+them. Fixed: all 42 are written, unbriefed ones with `brief_source: "not
+briefed"`. Export went from 2 rows to 34.
+
+### First full pipeline run
+
+```
+discovered (Overpass)             208
+chains checked for DSO            187   (12 flagged)
+audience: website + not DSO        42
+  sites reachable                  32
+  NPI organisation matched         11
+  deliverable (has MX)             34
+qualified (score >= 6)              3
+exported rows                      34   (11 with an email)
+```
+
+Top of the ranking:
+
+| Rank | Score | Coverage | Practice | Signals |
+|---|---|---|---|---|
+| 1 | 7 | 0.86 | Center For Dental Rehabilitation | `three_plus_providers`, `hiring_reception` |
+| 2 | 6 | 0.86 | Bischoff Family Dentistry | `three_plus_providers`, `no_online_booking` |
+| 3 | 6 | 0.86 | Solomon Pediatric Dental | `three_plus_providers`, `no_online_booking` |
+| 4 | 4 | 0.57 | Glendale Gentle Dentistry | `hiring_reception` |
+| 5 | 3 | 0.86 | Arcadia Dental Arts | `no_online_booking` |
+
+### Open
+
+- **22 of 42 practices score zero**, and three score -3 on `solo_provider`. The
+  model is working; the inputs are thin. Nothing above 7 out of a possible 14.
+- **Only 11 of 34 exported rows have an email address**, and none of the three
+  qualified accounts do. The list is rankable but not yet sendable. Practice
+  sites publish `info@` and `office@` or nothing, so the gap is address
+  discovery, not scoring.
+- **`hiring_reception` fired 3 times and is worth 4 points**, the heaviest
+  positive weight. It depends entirely on reaching a careers page, and ten sites
+  were unreachable. This signal is the most sensitive to fetch coverage.
+- `run.py` is still not built. Steps run individually in pipeline order.
