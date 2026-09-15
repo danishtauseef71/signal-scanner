@@ -28,7 +28,7 @@ CACHE_DIR = REPO_ROOT / "data" / "cache"
 OUTPUT_PATH = REPO_ROOT / "data" / "discover.json"
 
 OVERPASS_ENDPOINT = "https://overpass-api.de/api/interpreter"
-# Overpass etiquette asks for a real contact. Swap for the repo URL once it is public.
+# Overpass and NPPES etiquette ask for a reachable contact. The repo URL is it.
 USER_AGENT = "signal-scanner/0.1 (+https://github.com/danishtauseef71/signal-scanner)"
 QUERY_TIMEOUT_SECONDS = 60  # server side, declared inside the query
 HTTP_TIMEOUT_SECONDS = 90  # client side, must outlast the server timeout

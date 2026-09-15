@@ -38,7 +38,7 @@ OUTPUT_PATH = REPO_ROOT / "data" / "dso_check.json"
 NPPES_HOST = "npiregistry.cms.hhs.gov"
 NPPES_ENDPOINT = f"https://{NPPES_HOST}/api/"
 NPPES_VERSION = "2.1"
-# Swap for the repo URL once it is public.
+# Overpass and NPPES etiquette ask for a reachable contact. The repo URL is it.
 USER_AGENT = "signal-scanner/0.1 (+https://github.com/danishtauseef71/signal-scanner)"
 HTTP_TIMEOUT_SECONDS = 45
 DELAY_BETWEEN_CALLS_SECONDS = 1.0
