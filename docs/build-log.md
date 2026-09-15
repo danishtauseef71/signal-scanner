@@ -50,7 +50,7 @@ in a bounding box, writes `data/discover.json`, caches the raw response under
 
 ---
 
-## Step 4 — `dso_check.py`
+## Step 2 — `dso_check.py`
 
 **What it does.** Takes each distinct chain name in `data/discover.json`, asks
 NPPES how many locations it runs nationally and across how many states, and
@@ -142,7 +142,6 @@ was the point of the exercise:
 one state, and was correctly not flagged.
 
 ### What did not
-++
 **Five false positives, all generic names appearing once locally:**
 `DENTAL CENTER` (100/30), `ALL SMILES DENTAL` (54/24), `GATEWAY DENTAL` (48/21),
 `SOUTHERN SMILES` (40/12), `DIAMOND DENTAL` (37/20). These are unrelated
