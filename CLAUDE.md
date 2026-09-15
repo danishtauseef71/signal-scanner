@@ -20,17 +20,25 @@ receptionist that answers missed calls and books appointments.
 
 ## Pipeline
 1. `discover.py`    Overpass API, dental practices in a bounding box. Name, address, website, phone.
-2. `enrich_web.py`  Fetch homepage plus careers and contact pages. Extract signals.
-3. `enrich_npi.py`  Match each practice to the NPPES NPI Registry. Provider count, specialty, enumeration date.
-4. `dso_check.py`   National NPPES footprint per chain name. Flags `dso_owned` from thresholds, not a hardcoded list.
-5. `verify.py`      MX lookup per domain. Flag catch all, filter role addresses, flag free mail.
+2. `dso_check.py`   National NPPES footprint per chain name. Flags `dso_owned` from thresholds, not a hardcoded list.
+3. `enrich_web.py`  Fetch homepage plus careers and contact pages. Extract signals.
+4. `enrich_npi.py`  Match each practice to the NPPES NPI Registry. Provider count, specialty, enumeration date.
+5. `verify.py`      MX lookup per domain. Filter role addresses, flag free mail.
 6. `score.py`       Apply `icp.yaml`. Rank. Record which signals fired per account.
 7. `brief.py`       Short opening angle per qualified account.
 8. `export.py`      CSV with sequencer ready column names and personalisation variables.
 
 `dso_check.py` runs at chain grain, not practice grain: it checks each distinct
-chain name once and writes verdicts keyed by name, which `score.py` joins back
-onto practices by `osm_id`.
+chain name once and writes verdicts keyed by name. It only needs `discover.json`,
+so it runs second, before the enrichment chain that depends on its verdicts.
+
+`enrich_web.py` builds the addressable audience once, applying
+`filters.require_website` and dropping DSO owned practices. Steps 4 and 5 inherit
+that audience by reading the previous step's file rather than re-deriving it.
+
+`verify.py` does not attempt catch-all detection. Establishing it requires SMTP
+probing of third party mail servers, which is intrusive and gets sending IPs
+blocklisted, so `catch_all` is recorded as null.
 
 `run.py` chains them and accepts `--city`, `--limit` and `--from-step`.
 

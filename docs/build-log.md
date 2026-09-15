@@ -181,3 +181,86 @@ after dso_owned exclusion       42    (-8)
 means nothing to send to — but most of the 158 dropped are practices where *OSM*
 lacks a website, not ones without a website in reality. A website-resolution
 step would widen this far more than going metro-wide would.
+
+---
+
+## Steps 3, 4 and 5 — `enrich_web`, `enrich_npi`, `verify`
+
+Built together against the 42 practice audience (has a website, not DSO owned).
+
+**Ordering fix.** `dso_check` moved from step 4 to step 2. It only reads
+`discover.json`, and leaving it at 4 meant `enrich_web` at step 2 needed the
+output of step 4 to build its audience — a backwards dependency. The audience is
+now computed once, in `enrich_web`, and inherited downstream by reading the
+previous step's file.
+
+### Results
+
+```
+discovered                    208
+audience (website, not DSO)    42
+site reachable                 32   (10 unreachable)
+NPI organisation matched       11
+provider count known           20
+deliverable (has MX)           33
+```
+
+| Signal | True | Unknown |
+|---|---|---|
+| `no_online_booking` | 9 | 10 |
+| `hiring_reception` | 3 | 10 |
+| `accepting_new_patients` | 4 | 10 |
+| `multiple_locations` | 1 | 10 |
+| `three_plus_providers` | 5 | 22 |
+| `solo_provider` | 6 | 22 |
+
+The 10 unknowns on web signals are the unreachable sites. The 22 on NPI signals
+are practices with no postcode or no organisation above the confidence floor.
+
+### Bug found and fixed: postcode extraction
+
+`postcode_of` matched any five digit group, which grabbed the **street house
+number** on addresses that carry no postcode. "11851 N 28th Dr" became postcode
+11851, and ten of the supposed twenty-eight postcodes were East Coast zips that
+no Phoenix practice is in. The regex now requires a preceding state code and an
+end-of-string anchor. Real figures: **35 of 42 have a postcode, across 22
+distinct Arizona zips.** The fix recovered genuine matches that had been
+querying empty postcodes, including Valley Orthodontic Group at confidence 95.
+Cache files for the bogus zips were deleted.
+
+### Decisions
+
+- **NPI queries are keyed by postcode, not city.** Phoenix has 2000+ dentists
+  and city-wide paging runs past `skip=1800` without exhausting. A postcode
+  returns a small, complete set.
+- **Provider count uses address agreement alone,** not name similarity. An
+  individual dentist is enumerated under their own name, so requiring the
+  practice name to match would reject every provider at a practice not named
+  after a person. This is why 20 practices have a provider count while only 11
+  have a matched organisation.
+- **Booking detection records evidence, not just a boolean.** A scheduling
+  vendor (NexHealth, Weave, LocalMed and similar) or explicit "book online"
+  language counts as online booking. A "request an appointment" form does not —
+  the phone still does the work, which is exactly what the product replaces.
+  `booking_evidence` carries the vendor, the phrase, and whether only a request
+  form was found, so `score.py` can weigh them differently.
+- **Catch-all detection is deliberately not attempted.** It requires SMTP
+  probing of third party mail servers with addresses known not to exist, which
+  is intrusive and gets sending IPs blocklisted. `catch_all` is null with a
+  stated reason rather than guessed. The CLAUDE.md pipeline description was
+  updated to match.
+
+### Open
+
+- **10 of 42 sites are unreachable** (24%): three domains are dead
+  (`r2smile.com`, `savon-dental.com`, `westcactusdental.com` — NXDOMAIN or no
+  nameservers), the rest are 403s from bot protection. A full browser user agent
+  does not help; these block by IP reputation. Those 10 have null web signals.
+- **Only 1 personal email address was found across all 42 sites**, against 10
+  role addresses. Practice sites overwhelmingly publish `info@` and `office@`.
+  Whatever `export.py` does for personalisation cannot rely on a named contact.
+- **`book.kidtasticdental.com`** shows that domain extraction does not reduce to
+  the registrable domain. MX lives on the apex, so a booking subdomain in OSM
+  yields the wrong lookup. One case here, worth fixing before scale.
+- Five practices have no postcode and two have no address at all, so their NPI
+  fields stay blank by design.
